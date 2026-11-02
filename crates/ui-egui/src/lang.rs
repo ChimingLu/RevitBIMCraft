@@ -1,4 +1,4 @@
-//! The interface's language: English, as the code writes it, Brazilian Portuguese, Spanish or Simplified Chinese. What
+//! The interface's language: English, as the code writes it, Brazilian Portuguese, Spanish or Traditional Chinese. What
 //! the window shows goes through [`t`], English being its own key; the widget helpers translate
 //! their labels and tips, so most call sites pass English and read it back translated. What a
 //! project holds (names, what its drawings say) follows the project's language instead, and the
@@ -33,7 +33,7 @@ use bimcraft_core::language::Language;
 use egui::epaint::text::{FontInsert, FontPriority, InsertFontFamily};
 use egui::{Context, FontData, Id};
 
-/// The interface's language: one of a project's languages, or Simplified Chinese.
+/// The interface's language: one of a project's languages, or Traditional Chinese.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Lang {
     #[default]
@@ -70,20 +70,18 @@ impl Lang {
     /// Its name, in itself: Chinese in hanzi only once the window is drawn in it, which is when it can draw them.
     pub fn label(self) -> &'static str {
         match self {
-            Lang::Chinese if get() == Lang::Chinese => "简体中文",
-            Lang::Chinese => "Chinese (Simplified)",
+            Lang::Chinese if get() == Lang::Chinese => "繁體中文",
+            Lang::Chinese => "Chinese (Traditional)",
             other => other.project().label(),
         }
     }
 
-    /// A language by its code or name, or from a locale as systems give one: pt-BR, es_419.UTF-8, zh-CN. Only Simplified
-    /// Chinese is here: zh-TW, zh-HK and the other Traditional locales are none.
+    /// A language by its code or name, or from a locale as systems give one: pt-BR, es_419.UTF-8, zh-CN, zh-TW, zh-HK.
     pub fn from_code(code: &str) -> Option<Lang> {
         let lower = code.trim().to_lowercase();
         let parts: Vec<&str> = lower.split(['-', '_', '.', '@']).collect();
-        if matches!(parts[0], "zh" | "chinese") || lower == "简体中文" {
-            let traditional = parts.iter().any(|p| matches!(*p, "tw" | "hk" | "mo" | "hant"));
-            return (!traditional).then_some(Lang::Chinese);
+        if matches!(parts[0], "zh" | "chinese") || matches!(lower.as_str(), "简体中文" | "繁體中文") {
+            return Some(Lang::Chinese);
         }
         Language::from_code(code).map(Lang::from)
     }
@@ -267,17 +265,20 @@ mod tests {
         set(Lang::Chinese);
         assert_eq!(
             (t("Architecture"), t("File"), t("Wall Schedule"), t("Copy")),
-            ("建筑", "文件", "墙明细表", "复制"),
+            ("\u{5efa}\u{7bc9}", "\u{6587}\u{4ef6}", "\u{7246}\u{660e}\u{7d30}\u{8868}", "\u{8907}\u{88fd}",),
             "the window's words first, then the core's"
         );
-        assert_eq!(tf("Save changes to {}?", &["house"]), "是否将更改保存到 house？");
-        assert_eq!((category("wall", true), category("wall", false), category("spot", false)), ("墙".into(), "墙".into(), "高程点".into()));
+        assert_eq!(tf("Save changes to {}?", &["house"]), "\u{662f}\u{5426}\u{5c07}\u{66f4}\u{6539}\u{4fdd}\u{5b58}\u{5230} house\u{ff1f}");
+        assert_eq!(
+            (category("wall", true), category("wall", false), category("spot", false)),
+            ("\u{7246}".into(), "\u{7246}".into(), "\u{9ad8}\u{7a0b}\u{9ede}".into(),)
+        );
         assert_eq!(category("airterminal", true), "airterminal", "a category without a name is its key, as in the other languages");
-        assert_eq!((Lang::Chinese.label(), Lang::Portuguese.label()), ("简体中文", "Português (Brasil)"));
+        assert_eq!((Lang::Chinese.label(), Lang::Portuguese.label()), ("\u{7e41}\u{9ad4}\u{4e2d}\u{6587}", "Português (Brasil)"));
         set(Lang::English);
         assert_eq!(
             (t("Architecture"), Lang::Chinese.label()),
-            ("Architecture", "Chinese (Simplified)"),
+            ("Architecture", "Chinese (Traditional)"),
             "hanzi only once the window can draw them"
         );
     }
@@ -297,12 +298,25 @@ mod tests {
     }
 
     #[test]
-    fn the_codes_and_locales_that_mean_simplified_chinese_and_the_ones_that_do_not() {
-        for code in ["zh", "zh-CN", "zh_CN.UTF-8", "zh-Hans", "zh_Hans_CN", "zh-SG", "ZH", "chinese", "简体中文"] {
+    fn the_codes_and_locales_that_mean_chinese() {
+        for code in [
+            "zh",
+            "zh-CN",
+            "zh_CN.UTF-8",
+            "zh-Hans",
+            "zh_Hans_CN",
+            "zh-SG",
+            "zh-TW",
+            "zh_HK.UTF-8",
+            "zh-Hant",
+            "zh-Hant-TW",
+            "zh_MO",
+            "ZH",
+            "chinese",
+            "简体中文",
+            "繁體中文",
+        ] {
             assert_eq!(Lang::from_code(code), Some(Lang::Chinese), "{code}");
-        }
-        for code in ["zh-TW", "zh_HK.UTF-8", "zh-Hant", "zh-Hant-TW", "zh_MO"] {
-            assert_eq!(Lang::from_code(code), None, "{code}: Traditional is not what is here");
         }
         assert_eq!(
             ["pt-BR", "es_419.UTF-8", "en-US", "de", ""].map(Lang::from_code),

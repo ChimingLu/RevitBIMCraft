@@ -9,6 +9,7 @@ English messages stay in Rust as lookup keys and fallback text. Translations bel
 
 Interface and project language remain independent. Settings and project files retain `en`, `pt`, `es`, `sv`, `cs`, `fr`
 and `zh` (interface only); the project languages after `es` came with file format 11, whose step has nothing to convert. Native language names and locale aliases remain language metadata in Rust. Chinese
+interface text in `zh.po` is Traditional and accepts both Simplified and Traditional locale aliases for compatibility with older settings and system locales.
 still needs a system font, and the project's stroke lettering still cannot draw it. Diagnostics returned by the core,
 CLI and MCP remain English. Existing project and user-supplied names are never translated in place.
 
